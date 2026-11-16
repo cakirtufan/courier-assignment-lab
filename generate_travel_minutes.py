@@ -1,7 +1,7 @@
 import random
 import math
 
-def matrix_generator(num_couriers, num_orders):
+def constant_matrix_generator(num_couriers, num_orders):
 
     """
         Generates the ETA matrix with given number of couriers and orders
@@ -31,7 +31,7 @@ def matrix_generator(num_couriers, num_orders):
 def calculate_distance(x_start,y_start, x_end, y_end):
 
     """
-        Calculates the oklidian distance of two points
+        Calculates the euclidean distance of two points
         inputs  x_start x position of the courier
                 y_start y position of the courier
                 x_end x position of the delivery
@@ -41,15 +41,47 @@ def calculate_distance(x_start,y_start, x_end, y_end):
 
     return math.sqrt((x_end-x_start)**2 + (y_end-y_start)**2)
 
-def calculate_travel_minutes():
+def calculate_travel_minutes(distance, speed_kmh):
 
-    pass
+    """
+        Calculates the travel duruation
+        inputs  courier speed in kmh
+                order distance in km
+
+        output travel time in minutes       
+    """
+    return (distance/speed_kmh)*60
+
+def generate_eta_matrix(courier_positions, restaurant_positions, travel_speed):
+
+    eta_matrix = []
+
+    for courier in range(len(courier_positions)):
+
+        travel_time = []
+
+        for restaurant in range(len(restaurant_positions)):
+
+            distance = calculate_distance(courier_positions[courier][0],
+                                        courier_positions[courier][1],
+                                        restaurant_positions[restaurant][0],
+                                        restaurant_positions[restaurant][1])
+
+
+
+            travel_t = calculate_travel_minutes(distance, travel_speed)
+            travel_time.append(travel_t)
+
+        eta_matrix.append(travel_time)
+
+    return eta_matrix
 
 def main(num_couriers, num_orders):
 
-    matrix = matrix_generator(num_couriers, num_orders)
+    matrix = constant_matrix_generator(num_couriers, num_orders)
 
 if __name__ == "__main__":
 
     main(6, 6)
-    print(calculate_distance(0,0,3,4))
+    #print(calculate_travel_minutes(calculate_distance(0,0,3,4), 15))
+    print(generate_eta_matrix([(0, 0), (3, 0)], [(3, 4), (0, 4)], 15))
