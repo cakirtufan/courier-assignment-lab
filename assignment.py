@@ -1,13 +1,5 @@
 import pulp
-
-travel_minutes = [
-                [4,5,14,16], 
-                [5,19,17,20], 
-                [16,15,4,7], 
-                [18,17,6,11]
-                 ]
-
-assignment = [2,0,3,1]
+from generate_travel_minutes import matrix_generator
 
 def total_travel_time(travel_minutes, assignment):
 
@@ -113,7 +105,8 @@ def solve_assignment_problem(travel_minutes):
   
 
 def main():
-
+    
+    travel_minutes = matrix_generator(4,4)
     assigned_orders_greedy = assign_orders(travel_minutes)
     stats, assigned_orders_optimized = solve_assignment_problem(travel_minutes)
     total_travel_time_greedy = total_travel_time(travel_minutes, assigned_orders_greedy)
