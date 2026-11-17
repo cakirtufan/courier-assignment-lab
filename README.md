@@ -1,6 +1,92 @@
 # Courier Assignment Lab
 
-I built this small project to learn how to turn an assignment problem into a mathematical model and solve it with PuLP and CBC. I compare a simple greedy approach with a binary integer programming model using synthetic travel times.
+I am building this project step by step to learn courier assignment, mathematical optimisation, and delivery simulation, and to prepare for hiring manager and technical interviews for an Operations Research/Data Scientist role.
+
+The project started with a small synthetic assignment problem solved with greedy search and PuLP/CBC. The next goal is a simulation in which orders arrive over time, couriers move, restaurants prepare food, and available couriers receive new assignments. I want to compare assignment methods on the same scenarios and understand their behaviour under changing demand.
+
+The assignment algorithm chooses who serves each order. The simulation measures what happens after those decisions. A better result on one static matrix does not necessarily imply better performance over an entire delivery day.
+
+## Current implementation — 17 November 2026
+
+| File | Implemented | Still to connect or improve |
+|---|---|---|
+| `travel_times.py` | Random matrices, Euclidean distances, travel minutes, courier-to-restaurant matrices, per-order dropoff times, and preparation-aware delivery estimates | Input validation, reproducible random scenarios, and support for different courier speeds in the ETA calculation |
+| `assignment.py` | Greedy assignment, binary optimisation with PuLP/CBC, objective calculation, and solver status checking | Unequal fleet/order counts, explicit courier–order result pairs, and simulation integration |
+| `simulation.py` | `Courier` and `Order` classes; movement, pickup, waiting, delivery, and state updates; filtering by order arrival and courier availability | Automatic assignment, calls to courier updates in the main loop, completion conditions, and experiment metrics |
+
+The current top-level loop in `simulation.py` runs six time steps and prints delivery-time matrices. It does **not yet assign orders or move couriers**. The lifecycle methods exist, but the loop still needs to connect them to the assignment solver. The example has two couriers and orders arriving at minutes 0 and 3, producing a 2×1 matrix followed by a 2×2 matrix.
+
+`assignment.py` uses `constant_matrix_generator` from `travel_times.py` to generate random integer times from 1 to 30 for its comparison example.
+
+## Delivery-time model
+
+Positions are synthetic Cartesian `(x, y)` coordinates in kilometres, not latitude and longitude. Travel is along straight lines at a constant speed. Minutes are the simulation's time unit:
+
+```text
+travel_minutes = distance_km / speed_kmh * 60
+ready_at = created_at + prep_minutes
+remaining_prep_minutes = max(0, ready_at - current_time)
+delivery_eta[i][j] = max(pickup_eta[i][j], remaining_prep_minutes[j]) + dropoff_minutes[j]
+```
+
+Preparation and travel to the restaurant happen in parallel. If a courier arrives in 8 minutes, food is ready in 12 minutes, and the customer is 6 minutes from the restaurant, delivery takes 18 minutes from now. The courier waits at the restaurant for 4 minutes.
+
+Each matrix row represents an available courier; each column represents a waiting order. The restaurant and customer at the same order index belong together. Dropoff times are therefore a list with one value per order, rather than all restaurant–customer combinations. The current matrix calculation uses a shared speed of 15 km/h; it must be adapted before using different courier speeds.
+
+An ETA here is a duration from the current decision time. It excludes time the order has already spent waiting. End-to-end delivery time will be measured separately as `delivered_at - created_at`.
+
+## Courier and order lifecycle
+
+`Courier` stores identity, position, speed, state, and a reference to its assigned `Order`. `Order` stores its restaurant, customer, arrival time, preparation duration, ready time, assignment, and delivery timestamp.
+
+```text
+Courier: available → to_restaurant → waiting_at_restaurant → to_customer → available
+Order:   waiting → assigned → picked_up → delivered
+```
+
+The restaurant waiting state is skipped if the food is already ready. After delivery, the courier stays at the customer's location and becomes available again. Each courier carries at most one order, and the intended policy does not reassign an order once allocated.
+
+`update(current_time, minutes)` treats `current_time` as the beginning of a step. It moves the courier or checks preparation, then records transitions at `current_time + minutes`. Only one state branch is processed per call. Unused time after reaching a destination is not carried into the next leg, so this discrete simulation can finish later than the continuous ETA estimate.
+
+A small manual lifecycle check uses a courier at `(0, 0)`, restaurant at `(0.5, 0)`, customer at `(1, 0)`, speed 15 km/h, and preparation ending at minute 4. With one-minute updates, the courier reaches the restaurant at minute 2, waits until minute 4, and delivers at minute 6. This is a development check, not an automated test suite.
+
+## Next steps: connect the simulation
+
+The intended step order is:
+
+1. Select orders with `created_at <= current_time` and status `waiting`.
+2. Select couriers with status `available`.
+3. If both groups are nonempty, calculate their delivery-time matrix and solve the assignment.
+4. Map selected matrix indices back to the filtered objects and call `assign_order`.
+5. Call `update(current_time, 1)` for **every courier**, including when no new assignment is possible.
+6. Record results and advance the clock; eventually stop when all scheduled orders have been delivered, with a maximum horizon for incomplete runs.
+
+The existing solver requires exactly one order per courier and exactly one courier per order. For unequal counts, the planned formulation will use at-most-one constraints on both sides and require a total of `min(available couriers, waiting orders)` assignments, assuming all pairs are feasible. Without that total, minimising nonnegative costs could select no assignments at all.
+
+The solver, greedy baseline, and objective evaluator will need a consistent result format that supports unassigned couriers, such as explicit `(courier_index, order_index)` pairs. These indices refer to the filtered lists, not persistent object IDs.
+
+## Experiments and later extensions
+
+The aim is to replay the same order arrivals, preparation durations, initial positions, and fleet settings for each assignment method. Each run should start from fresh objects, and random scenario generation should use a recorded seed. Random preparation durations should be sampled once per order, rather than resampled at each decision.
+
+Planned measurements include mean and maximum order-to-delivery time, time waiting for assignment, courier waiting time at restaurants, outstanding orders at the end of a run, and assignment computation time. Most of these metrics and event timestamps still need to be implemented. Comparing several scenarios will help explore demand peaks and fleet shortages without claiming that one small example proves general performance.
+
+Map visualisation is a later goal: display restaurants, customers, courier movement, and assignment decisions. Real road travel times and routes would be a separate extension requiring geographic coordinates, a routing source, and movement along routes. No map or routing API is integrated yet.
+
+This is currently preparation for dynamic assignment. A full vehicle routing problem, with multiple orders per courier and decisions about pickup/delivery sequence, remains a future extension.
+
+## Running the current work
+
+```powershell
+python -m pip install -r requirements.txt
+python simulation.py
+```
+
+The simulation command currently prints ETA matrices only. `python travel_times.py` runs its calculation example without printing results. `python assignment.py` runs the greedy-versus-MIP comparison on a random 4×4 matrix; results vary between runs and are not the fixed historical totals below. The example loop in `simulation.py` is currently at module level, so importing that module also runs it; moving it behind a main guard is still pending.
+
+## Original static assignment exercise
+
+The remaining sections preserve the original worked example and learning notes. Its fixed matrix and reported 45-versus-23-minute results are historical reference values, not output from the current simulation or random generator.
 
 ## The problem
 
@@ -216,7 +302,7 @@ The order indices in the list start at 0. The corresponding assignments are:
 
 Each courier and each order appears exactly once. The selected times add up to `5 + 5 + 7 + 6 = 23`, matching the solver's objective value.
 
-## Running the example
+## Running the original example (historical)
 
 I removed the debugging prints from the calculation functions. In `main()`, I obtain the greedy and solver assignments, evaluate both with `total_travel_time`, and print the comparison.
 
@@ -256,6 +342,6 @@ Both couriers must receive an order, but the single order can only be assigned t
 
 An infeasible model has no assignment satisfying all its constraints. That is different from a search that stops before proving optimality.
 
-## Current progress
+## Static exercise milestone
 
-I have implemented the greedy and solver approaches, separated calculations from output, and compared both methods using the same travel-time function. I have run the normal example and checked the error handling on an infeasible input. The next step is to record the dependencies and finish preparing the repository for sharing.
+The original exercise established a greedy baseline, a solver model, a shared objective calculation, and a check for infeasible inputs. The project is now extending these pieces into the dynamic simulation described at the top of this README.

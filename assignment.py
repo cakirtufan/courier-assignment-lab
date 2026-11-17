@@ -1,5 +1,5 @@
 import pulp
-from travel_times import matrix_generator
+from travel_times import constant_matrix_generator
 
 def total_travel_time(travel_minutes, assignment):
 
@@ -106,7 +106,7 @@ def solve_assignment_problem(travel_minutes):
 
 def main():
     
-    travel_minutes = matrix_generator(4,4)
+    travel_minutes = constant_matrix_generator(4,4)
     assigned_orders_greedy = assign_orders(travel_minutes)
     stats, assigned_orders_optimized = solve_assignment_problem(travel_minutes)
     total_travel_time_greedy = total_travel_time(travel_minutes, assigned_orders_greedy)
