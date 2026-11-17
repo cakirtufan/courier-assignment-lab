@@ -87,59 +87,74 @@ def courier_restorant_eta_matrix(courier_positions, restaurant_positions, travel
 
     return courier_restorant_eta_matrix
 
-def restaurant_delivery_eta_matrix(restaurant_positions, delivery_positions, travel_speed):
+def calculate_dropoff_times(restaurant_positions, delivery_positions, travel_speed):
 
     """
-    Calculates the eta matrix with position of the restaurant and the current position of the courier
+    Calculates the drop off times with position of the restaurant and the current position of the courier
+
+    inputs  restaurant position
+            dropoff position
+            travel speed of the courier
+
+    output  drop off times
+
+    """
+
+    drop_off_times = []
+
+    for restaurant in range(len(restaurant_positions)):
+
+        x_i, y_i, x_e, y_e = restaurant_positions[restaurant][0], restaurant_positions[restaurant][1], delivery_positions[restaurant][0], delivery_positions[restaurant][1]
+
+        distance = calculate_distance(x_i, y_i, x_e, y_e)
+
+        travel_time = calculate_travel_minutes(distance, travel_speed)
+
+        drop_off_times.append(travel_time)
+
+    return drop_off_times
+
+
+def calculate_delivery_time(pick_up_travel, remaining_prep_minutes, dropoff_travel_minutes):
+
+    """
+    Calculates the eta matrix with position of the restaurant and position of the drop-off
 
     inputs  restaurant position
             dropoff position
             travel speed of the courier
 
     output  eta matrix
-
     """
 
-    restaurant_delivery_eta_matrix = []
+    final_eta = []
 
-    for restaurant in range(len(restaurant_positions)):
+    for courier in range(len(pick_up_travel)):
 
-        travel_time = []
+        eta_courier = []
 
-        for delivery in range(len(delivery_positions)):
+        for order in range(len(pick_up_travel[courier])):
 
-            distance = calculate_distance(restaurant_positions[restaurant][0],
-                                        restaurant_positions[restaurant][1],
-                                        delivery_positions[delivery][0],
-                                        delivery_positions[delivery][1])
+            eta_courier.append(max(remaining_prep_minutes[order], 
+                                   pick_up_travel[courier][order]
+                                   ) + dropoff_travel_minutes[order]
+                                   )
 
+        final_eta.append(eta_courier)
 
-
-            travel_t = calculate_travel_minutes(distance, travel_speed)
-            travel_time.append(travel_t)
-
-        restaurant_delivery_eta_matrix.append(travel_time)
-
-    return restaurant_delivery_eta_matrix
-
-def calculate_delivery_time(pick_up_travel, remaining_prep_minutes, dropoff_travel_minutes):
-
-    return max(remaining_prep_minutes, pick_up_travel) + dropoff_travel_minutes
+    return final_eta
 
 def main(num_couriers, num_orders):
 
     matrix = constant_matrix_generator(num_couriers, num_orders)
+    courier_restaurant = courier_restorant_eta_matrix([(0, 0), (3, 0)], [(3, 4), (0, 4)], 15)
+    restaurant_delivery = calculate_dropoff_times([(3, 4), (0, 4)], [(6, 4), (0, 7)], 15)
+    remaining_prep_minutes = [12, 18]
+    eta_matrix = calculate_delivery_time(courier_restaurant, remaining_prep_minutes, restaurant_delivery)
+
+    
 
 if __name__ == "__main__":
 
-    main(6, 6)
-    #print(calculate_travel_minutes(calculate_distance(0,0,3,4), 15))
-    #print(generate_eta_matrix([(0, 0), (3, 0)], [(3, 4), (0, 4)], 15))
+    main(6,6)
 
-
-    courier_restaurant = courier_restorant_eta_matrix([(0, 0), (3, 0)], [(3, 4), (0, 4)], 15)
-    restaurant_delivery = restaurant_delivery_eta_matrix([(3, 4), (0, 4)], [(6, 4), (0, 7)], 15)
-
-    print([[restaurant_delivery[i][j] + courier_restaurant[i][j] for j in range(len(restaurant_delivery[0]))] for i in range(len(restaurant_delivery))])
-
-    #print(calculate_delivery_time(8,12,6))
