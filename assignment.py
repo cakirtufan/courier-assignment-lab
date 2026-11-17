@@ -1,5 +1,5 @@
 import pulp
-from generate_travel_minutes import matrix_generator
+from travel_times import matrix_generator
 
 def total_travel_time(travel_minutes, assignment):
 

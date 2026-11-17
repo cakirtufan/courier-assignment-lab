@@ -92,9 +92,9 @@ def calculate_dropoff_times(restaurant_positions, delivery_positions, travel_spe
     """
     Calculates the drop off times with position of the restaurant and the current position of the courier
 
-    inputs  restaurant position
-            dropoff position
-            travel speed of the courier
+    inputs  restaurant_positions : restaurant position
+            delivery_positions : dropoff position
+            travel_speed : travel speed of the courier
 
     output  drop off times
 
@@ -120,9 +120,9 @@ def calculate_delivery_time(pick_up_travel, remaining_prep_minutes, dropoff_trav
     """
     Calculates the eta matrix with position of the restaurant and position of the drop-off
 
-    inputs  restaurant position
-            dropoff position
-            travel speed of the courier
+    inputs  pick_up_travel
+            remaining_prep_minutes
+            dropoff_travel_minutes
 
     output  eta matrix
     """
