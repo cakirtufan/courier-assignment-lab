@@ -132,6 +132,36 @@ class Order():
         self.delivered_at = None
 
 
+
+class RouteProgress():
+
+    def __init__(self, edge_lengths_m, speed_kmh):
+
+        self.edge_lengths_m = edge_lengths_m
+        self.speed_kmh = speed_kmh
+        self.courier_edge_index = 0
+        self.distance_on_edge_m = 0
+        self.finished = False
+
+
+    def calculate_travel_distance(self, minutes):
+
+        return self.speed_kmh * (minutes/60) * 1000
+
+    def calculate_rest_distance(self):
+
+        return self.edge_lengths_m[self.courier_edge_index] - self.distance_on_edge_m
+
+    def advance(self,minutes):
+
+        travel_distance = self.calculate_travel_distance(minutes)
+        rest_distance = self.calculate_rest_distance()
+
+        if travel_distance < rest_distance:
+        
+            self.distance_on_edge_m += travel_distance
+
+
 from travel_times import courier_restorant_eta_matrix, calculate_dropoff_times, calculate_delivery_time
 
 couriers = [Courier(1,0,0,15), Courier(2,0,0,15)]
